@@ -10,13 +10,15 @@
 #include <native/sem.h>
 #include <native/mutex.h>
 RT_SEM sem;
-RT_SEM res;
+RT_MUTEX res;
+
+static RT_TASK tsk[4];
 
 void print_pri(RT_TASK *tsk, char *str){
     struct rt_task_info tmp;
-    rt_task_inquire(task, &tmp);
-    rt_printf("b:%i, c:%i ", tmp.bprio, temp.cprio);
-    rt_printf(s);
+    rt_task_inquire(tsk, &tmp);
+    rt_printf("b:%i, c:%i ", tmp.bprio, tmp.cprio);
+    rt_printf(str);
 }
 
 int rt_task_sleep_ms(unsigned long delay){
@@ -48,7 +50,7 @@ void tskMed(void *i){
     rt_task_sleep_ms(1);
     print_pri(&tsk[1], "med task locked resource\n");
     busy_wait_ms(5);
-    print_pri(&tsk[0], "Med task done\n");
+    print_pri(&tsk[1], "Med task done\n");
 }
 
 void tskHig(void *i){
@@ -56,9 +58,9 @@ void tskHig(void *i){
     rt_sem_p(&sem, TM_INFINITE);
     rt_task_sleep_ms(3);
     rt_mutex_acquire(&res, TM_INFINITE);
-    print_pri(&tsk[0], "High task locked resource\n");
+    print_pri(&tsk[2], "High task locked resource\n");
     busy_wait_ms(5);
-    print_pri(&tsk[0], "High task done\n");
+    print_pri(&tsk[2], "High task done\n");
     rt_mutex_release(&res);
 }
 
@@ -71,30 +73,29 @@ void mainTsk(void *i){
 int main(){
 	mlockall(MCL_CURRENT | MCL_FUTURE);
 	rt_print_auto_init(1);
-	RT_TASK tsk[3];
 
-    rt_sem_create(&sem, (const char) "S", 0, S_PRIO);
-    rt_mutex_create(&res, (const char) "M");
+    rt_sem_create(&sem,  "S", 0, S_PRIO);
+    rt_mutex_create(&res, "MU");
 
-    rt_task_create(&(tsk[3]), (const char) "S", 0, 75, T_CPU(0) | T_JOINABLE);
-	rt_task_create(&(tsk[0]), (const char) "L", 0, 25, T_CPU(0) | T_JOINABLE);
-	rt_task_create(&(tsk[1]), (const char) "M", 0, 50, T_CPU(0) | T_JOINABLE);
-	rt_task_create(&(tsk[2]), (const char) "H", 0, 75, T_CPU(0) | T_JOINABLE);
+    	rt_task_create(&(tsk[3]), "Main", 0, 75, T_CPU(0) | T_JOINABLE);
+	rt_task_create(&(tsk[0]), "L", 0, 25, T_CPU(0) | T_JOINABLE);
+	rt_task_create(&(tsk[1]), "M", 0, 50, T_CPU(0) | T_JOINABLE);
+	rt_task_create(&(tsk[2]), "H", 0, 75, T_CPU(0) | T_JOINABLE);
 
     rt_task_start(&(tsk[0]), &tskLow, (void*) 1);
     rt_task_start(&(tsk[1]), &tskMed, (void*) 2);
     rt_task_start(&(tsk[2]), &tskHig, (void*) 3);
     usleep(100*1000);
-    rt_task_start(&(tsk[3], &mainTsk, (void *) NULL);
+    rt_task_start(&(tsk[3]), &mainTsk, (void *) NULL);
 
     for(int i=0; i < 4; i++){
         rt_task_join(&tsk[i]);
     }
 
     rt_mutex_delete(&res);
-    rt_printf("Res delted\n")l
+    rt_printf("Res delted\n");
     rt_sem_delete(&sem);
-    rt_printf("Sem delted, exit\n")l
+    rt_printf("Sem delted, exit\n");
 
 
     return 0;
