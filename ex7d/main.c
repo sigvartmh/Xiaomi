@@ -41,13 +41,16 @@ void tskLow(void *i){
     rt_sem_p(&sem, TM_INFINITE);
     rt_mutex_acquire(&mu_a, TM_INFINITE);
     print_pri(&tsk[0], "Low task locked A\n");
+    rt_task_set_priority(NULL, 50);
     busy_wait_ms(3);
+
     rt_mutex_acquire(&mu_b, TM_INFINITE);
     print_pri(&tsk[0], "Low task locked B\n");
     busy_wait_ms(3);
     rt_mutex_release(&mu_b);
     rt_mutex_release(&mu_a);
     busy_wait_ms(1);
+    rt_task_set_priority(NULL, 25);
     print_pri(&tsk[0], "Low task done\n");
 }
 
@@ -81,8 +84,7 @@ int main(){
 	
     rt_task_create(&(tsk[3]), "Main", 0, 75, T_CPU(0) | T_JOINABLE);
 	rt_task_create(&(tsk[0]), "L", 0, 25, T_CPU(0) | T_JOINABLE);
-	rt_task_create(&(tsk[1]), "M", 0, 50, T_CPU(0) | T_JOINABLE);
-	rt_task_create(&(tsk[2]), "H", 0, 75, T_CPU(0) | T_JOINABLE);
+	rt_task_create(&(tsk[2]), "H", 0, 50, T_CPU(0) | T_JOINABLE);
 
     rt_task_start(&(tsk[0]), &tskLow, (void*) 1);
     rt_task_start(&(tsk[2]), &tskHig, (void*) 3);
